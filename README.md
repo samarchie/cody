@@ -18,7 +18,7 @@
 
 ### Getting Started
 
-1. Create a Slack App, named Cody, to allow external programs (such as Python) to post messages to the Civil Systems Slack workspace. To do so, create the bot through a [Slack App](https://api.slack.com/apps), choose 'Bots' and 'Permissions' for the 'Features and Functionality', **and most importantly**: set the OAuth & Permissions Bot Scope to: **```chat:write```**.
+1. Create a Slack App, named Cody, to allow external programs (such as Python) to post messages to the Civil Systems Slack workspace. To do so, create the bot through a [Slack App](https://api.slack.com/apps), choose 'Bots' and 'Permissions' for the 'Features and Functionality', **and most importantly**: set the OAuth & Permissions Bot Scope to: **```chat:write and files:write```**.
 
 2. From the Slack App webpage, locate the 'Bot User OAuth Token' on the OAuth & Permissions page, and save this in a textfile at ```R:/admin/slack_token.txt```
 This wil be in the form alike: ```xoxb-17653672481-19874698323-pdFZKVeTuE8sk7oOcBrzbqgy```
@@ -34,7 +34,7 @@ This wil be in the form alike: ```xoxb-17653672481-19874698323-pdFZKVeTuE8sk7oOc
 from os import getcwd; from os.path import join; from sys import path
 path.append(join(getcwd(), "src"))
 from slack import post_message_to_slack
-post_message_to_slack("#smco_code_updates", "Information", "Simulation 1", "Hello World!")
+post_message_to_slack("Information", "Simulation 1", "Hello World!", silent=True)
 ```
 
 <br>
