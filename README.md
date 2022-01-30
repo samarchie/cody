@@ -34,7 +34,7 @@ This wil be in the form alike: ```xoxb-17653672481-19874698323-pdFZKVeTuE8sk7oOc
 from os import getcwd; from os.path import join; from sys import path
 path.append(join(getcwd(), "src"))
 from slack import post_message_to_slack
-post_message_to_slack("Hello World!")
+post_message_to_slack(["Hello World!", "I am Cody"]])
 ```
 
 <br>
