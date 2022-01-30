@@ -27,7 +27,7 @@ This wil be in the form alike: ```xoxb-17653672481-19874698323-pdFZKVeTuE8sk7oOc
 
 4. Place slack.py in your 'src' folder of your project repository.
 
-4. Edit Line 4 of slack.py to the desired default channel to post to in the Civil Systems workspace.  
+4. Edit slack.py to the desired default channel and desired default silent user to post to in the Civil Systems workspace.  
 
 3. Inside your project code, place the following lines to import and use the function to post a message to slack.
 ```sh
