@@ -10,18 +10,17 @@ GREETINGS = ["Kia ora!", "Howdy partner.", "G'day mate.", "What up g? :sunglasse
 HAPPY_EMOJIS = [":tada:", ":cheering_bec:", ":smiley_mitch:", ":ecstatic_tom:", ":partying_face:", ":happy_patrick:", ":happy_tom:", ":dab_tom:"]
 SAD_EMOJIS = [":sad_will:", ":sad_will_and_lucy:", ":cry:", ":disappointed_relieved:", ":angry_will:"]
 
-SLACK_TOKEN = open("R:/admin/slack_token.txt".format("R:" if platform == "win32" else "/media/CivilSystems"), 'r').read().strip('\n')
-
-DEFAULT_USER = "U015WCS0XU6" # Usercode for Sam Archie
-DEFAULT_CHANNEL = "#spatial_optimization" 
+SLACK_TOKEN = open("{}/admin/slack_token.txt".format("R:" if platform == "win32" else "/media/CivilSystems"), 'r').read().strip('\n')
 
 
-def post_message_to_slack(message_type, identifier, message=None, greet=True, silent=True):
+def post_message_to_slack(channel, message_type, identifier, message=None, greet=True, silent_username=None):
     """
     Posts a message to a Slack Channel or User.
     
     Parameters
     ----------
+    channel: String
+        A string representing the channel to post to. Note: if you keep on recieving a 'channel_not_found' error, note that a channel must start with a hashtag, and if that fails, then please check the spelling of the channel.
     message_type : String
         A string representing what type of message this post should be. There are currently three options: Information, Failure and Success. Each one will post a different amount of blocks, with differnt styles of wording within them.
     identifier: String
@@ -30,8 +29,8 @@ def post_message_to_slack(message_type, identifier, message=None, greet=True, si
         If the message_type is Information or Failure, the message will be used in a section below a divider and will typically be a informative message or an error traceback for the two message_types respectively. 
     greet: Bool
         If True, post a cheerful greeting before the message.
-    silent: Bool
-        If True, post the message in the default channel but the message will be hidden to everyone on the channel except the default user.
+    silent_user: String or None
+        If silent_user is specified, then the message is posted to the channel (irrelevant if public or private) but only the silent_user can see the message.
    
     Returns
     -------
@@ -43,10 +42,12 @@ def post_message_to_slack(message_type, identifier, message=None, greet=True, si
     blocks = generate_blocks(message_type, message, header_lines, greet)
 
     try:
-        if silent:
-            _ = WebClient(SLACK_TOKEN).chat_postEphemeral(channel=DEFAULT_CHANNEL, blocks=blocks, user=DEFAULT_USER, text=header)
+        if silent_username != None:
+            client = WebClient(SLACK_TOKEN)
+            silent_user_id = get_users_information_from_name(silent_username, "id", client)
+            _ = client.chat_postEphemeral(channel=channel, blocks=blocks, user=silent_user_id, text=header)
         else:
-            _ = WebClient(SLACK_TOKEN).chat_postMessage(channel=DEFAULT_CHANNEL, blocks=blocks, text=header)
+            _ = WebClient(SLACK_TOKEN).chat_postMessage(channel=channel, blocks=blocks, text=header)
     
     except SlackApiError as error:
         warn("The message could not be posted to slack. Error: {}".format(error.response["error"]), UserWarning)
@@ -160,12 +161,14 @@ def generate_blocks(message_type, message, header_lines, greet):
     return blocks
 
 
-def post_file_to_slack(filenames, message, greet=True):
+def post_file_to_slack(channel, filenames, message, greet=True):
     """
     Posts a file to a Slack Channel or User.
     
     Parameters
     ----------
+    channel: String
+        A string representing the channel to post to. Note: if you keep on recieving a 'channel_not_found' error, note that a channel must start with a hashtag, and if that fails, then please check the spelling of the channel.
     filenames : String or List of Strings
         A string representing the filepath to the file to be posted, or a list of strings to post.
     message: String
@@ -187,8 +190,115 @@ def post_file_to_slack(filenames, message, greet=True):
 
     try:
         for filename in filenames:
-            _ = WebClient(SLACK_TOKEN).files_upload(channels=DEFAULT_CHANNEL, initial_comment=greeting+message, file=filename)
+            _ = WebClient(SLACK_TOKEN).files_upload(channels=channel, initial_comment=greeting+message, file=filename)
     
     except SlackApiError as error:
         warn("The file could not be posted to slack. Error: {}".format(error.response["error"]), UserWarning)
 
+
+def get_users_information_from_name(user_name, wanted_information, client):
+    """
+    Retrieves a specified *wanted_information* attribute of a user by the name of *user_name*. The *user_name* can be the full name of the individual or their display name. If no exact matches are found, then possible matches are considered by their full name, display name and by first name and surname.
+    
+    Parameters
+    ----------
+    user_name : String
+        A string representing the name of the user to be contacted, e.g. 'Sam Archie' or 'tom'. 
+    wanted_information: String
+        A string representing the  
+    greet: Bool
+        If True, post a cheerful greeting before the message.
+   
+    Returns
+    -------
+    None : No parameters are outputted
+    
+    """
+
+    # Change the user_name to title case so we can == compare it with the other fields
+    user_name = user_name.title()
+    
+    # Create lists for exact and possible matches
+    exact_matches = []
+    possible_matches = []
+
+    # Query the client for a list of members
+    members = client.users_list()["members"]
+
+    for member in members:
+        # If inactive user or is a bot then continue to the next
+        if member["deleted"] or member["is_bot"]:
+            continue
+        
+        # Check for exact results of id! E.g. the user passed in the actual id of the person, so why bother looking any further!
+        if member.get("id", "") == user_name:
+            return user_name
+        
+        # Check for exact mataches against the profile
+        profile_details = member.get("profile", {})
+        if profile_details.get("real_name", "").title() == user_name:
+            exact_matches.append(member)
+        elif profile_details.get("display_name", "").title() == user_name:
+            exact_matches.append(member)
+        elif profile_details.get("real_name_normalized", "").title() == user_name:
+            exact_matches.append(member)
+        elif profile_details.get("display_name_normalized", "").title() == user_name:
+            exact_matches.append(member)
+
+        # Check for possible matches
+        elif user_name in member.get("id", ""):
+            possible_matches.append(member)
+        elif user_name in profile_details.get("real_name", "").title():
+            possible_matches.append(member)
+        elif user_name in profile_details.get("display_name", "").title():
+            possible_matches.append(member)
+        elif user_name in profile_details.get("real_name_normalized", "").title():
+            possible_matches.append(member)
+        elif user_name in profile_details.get("display_name_normalized", "").title():
+            possible_matches.append(member)
+        elif user_name.split(" ")[0] in profile_details.get("first_name", "").title():
+            possible_matches.append(member)
+        elif user_name.split(" ")[-1] in profile_details.get("last_name", "").title():
+            possible_matches.append(member)
+
+    
+    if len(exact_matches) == 1:
+        # Best case scenario!
+        chosen_user_details = exact_matches[0]
+
+    elif len(exact_matches) > 1:
+        print(f"Multiple users detected with the user_name '{user_name}'. Please define which user you are indending to post to from the current list:\n")
+        counter = 1
+        for exact_match in exact_matches:
+            print(f"Possible Match {counter}:")
+            print(exact_match, end="\n")
+            counter +=1 
+        correct_individual_number = input(f"From this list, which number (from 1 to {len(exact_matches)}) was the user you were wishing to post locate?")
+        chosen_user_details = exact_matches[correct_individual_number - 1]
+    
+    else:
+        if len(possible_matches) == 1:
+            chosen_user_details = possible_matches[0]
+            print(f"No exact matches were found for '{user_name}. However, multiple possible matches exists. Please define which user you are indending to post to from the current list:\n")
+            counter = 1
+            for possible_match in possible_matches:
+                print(f"Possible Match {counter}:")
+                print(possible_match, end="\n")
+                counter +=1 
+            correct_individual_number = input(f"From this list, which number (from 1 to {len(possible_matches)}) was the user you were wishing to post locate?")
+            chosen_user_details = possible_matches[correct_individual_number - 1]
+
+    # Now grab the wanted_information from the chosen_user_details
+    if wanted_information in chosen_user_details:
+        chosen_information = chosen_user_details[wanted_information]
+    elif wanted_information in chosen_user_details["profile"]:
+        chosen_information = chosen_user_details["profile"][wanted_information]
+    else:
+        keys = sorted(set(list(chosen_user_details.keys()) + list(chosen_user_details["profile"].keys())))
+        correct_wanted_information = input(f"The user name {user_name} was found but the wanted information {wanted_information} is not within the recorded details. Please choose from the following:\n {keys}")
+        if correct_wanted_information in chosen_user_details:
+            chosen_information = chosen_user_details[correct_wanted_information]
+        elif correct_wanted_information in chosen_user_details["profile"]:
+            chosen_information = chosen_user_details["profile"][correct_wanted_information]
+    
+    return chosen_information
