@@ -16,25 +16,24 @@
 
 ### About Cody
 
+Cody is API that allows users to write public/private messages, silent messages, upload files and control most aspects of Slack. Cody is pretty flexible - in the fact it doesn't have to be called from Python but can be called from most platforms using the slack token through an API call. However, as the team mainly works in Python, cody.py has been established to help you take care of mundane tasks.
+
 ### Getting Started
 
-1. Create a Slack App, named Cody, to allow external programs (such as Python) to post messages to the Civil Systems Slack workspace. To do so, create the bot through a [Slack App](https://api.slack.com/apps), choose 'Bots' and 'Permissions' for the 'Features and Functionality', **and most importantly**: set the OAuth & Permissions Bot Scope to: **```chat:write and files:write```**.
+1. Create a Slack App, named Cody, to allow external programs (such as Python) to post messages to the Civil Systems Slack workspace. To do so, create the bot through a [Slack App](https://api.slack.com/apps), choose 'Bots' and 'Permissions' for the 'Features and Functionality', **and most importantly**: set the OAuth & Permissions Bot Scope to: **```chat:write, channels:read, users:read and files:write```**.
 
 2. From the Slack App webpage, locate the 'Bot User OAuth Token' on the OAuth & Permissions page, and save this in a textfile at ```R:/admin/slack_token.txt```
 This wil be in the form alike: ```xoxb-17653672481-19874698323-pdFZKVeTuE8sk7oOcBrzbqgy```
 
 3. In your project virtual environmnet or global Python environment, install the required packages in ```requirements.txt```.
 
-4. Place slack.py in your 'src' folder of your project repository.
-
-4. Edit slack.py to the desired default channel and desired default silent user to post to in the Civil Systems workspace.  
-
-3. Inside your project code, place the following lines to import and use the function to post a message to slack.
+4. Inside your project code, place the following lines to import and use the function to post a message to slack.
 ```sh
-from os import getcwd; from os.path import join; from sys import path
-path.append(join(getcwd(), "src"))
-from slack import post_message_to_slack
-post_message_to_slack("Information", "Simulation 1", "Hello World!", silent=True)
+from os.path import join; from sys import path
+path.append(join("{}".format("R:\\" if platform == "win32" else "/media/CivilSystems"), "admin", "cody"))
+from slack import post_message_to_slack, post_files_to_slack
+post_message_to_slack(channel="#spatial_optimization", message_type="Information", identifier="Simulation 1", message="Hello World!", greet=True, silent_username="Sam")
+post_files_to_slack(channel="#spatial_optimization", ["filepath1", "filepath2", "filepath3"], message='Here are my 3 files!', greet=True)
 ```
 
 <br>

@@ -7,8 +7,8 @@ from textwrap import wrap
 from warnings import warn
 
 GREETINGS = ["Kia ora!", "Howdy partner.", "G'day mate.", "What up g? :sunglasses:", "Ugh finally, this shit is done.", "Kachow! :racing_car:", "Kachigga! :racing_car:", "Sup dude.", "Woaaaaahhhh, would you look at that!", "Easy peasy.", "Rock on bro. :call_me_hand:", "Leshgoooooo!", "Let's get this bread!", "You're doing great dude. :kissing_heart:", "Another one bits the dust...", "Sup, having a good day?", "Yeeeeeeehaw cowboy! :face_with_cowboy_hat:"] 
-HAPPY_EMOJIS = [":tada:", ":cheering_bec:", ":smiley_mitch:", ":ecstatic_tom:", ":partying_face:", ":happy_patrick:", ":happy_tom:", ":dab_tom:"]
-SAD_EMOJIS = [":sad_will:", ":sad_will_and_lucy:", ":cry:", ":disappointed_relieved:", ":angry_will:"]
+HAPPY_EMOJIS = [":tada:", ":cheering_bec:", ":smiley_mitch:", ":ecstatic_tom:", ":partying_face:", ":happy-patrick:", ":happy_tom:", ":dabtom:"]
+SAD_EMOJIS = [":sad_will:", ":sad_willandluci:", ":cry:", ":disappointed_relieved:", ":angywill:"]
 
 SLACK_TOKEN = open("{}/admin/slack_token.txt".format("R:" if platform == "win32" else "/media/CivilSystems"), 'r').read().strip('\n')
 
@@ -38,6 +38,9 @@ def post_message_to_slack(channel, message_type, identifier, message=None, greet
     
     """
     
+    if not channel.startswith("#"):
+        channel = "#" + channel
+
     header, header_lines = generate_header(message_type, identifier) 
     blocks = generate_blocks(message_type, message, header_lines, greet)
 
@@ -75,14 +78,14 @@ def generate_header(message_type, identifier):
     
     if message_type == 'Success':
         emojis = sample(HAPPY_EMOJIS, 2)
-        header = f'{emojis[0]} {message_type.title()} {emojis[1]}|  {identifier}  |  Running on {gethostname()}'
+        header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
 
     elif message_type == "Failure":
         emojis = sample(SAD_EMOJIS, 2)
-        header = f'{emojis[0]} {message_type.title()} {emojis[1]}|  {identifier}  |  Running on {gethostname()}'
+        header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
     
     else:
-        header = f'{message_type.title()}|  {identifier}  |  Running on {gethostname()}'
+        header = f'{message_type.title()} |  {identifier}  |  Running on {gethostname()}'
     
     # Unfortunately, there is a 150 character limit on the header length, so split and send multiple if that is the case!
     header_lines = [header]
@@ -181,6 +184,9 @@ def post_file_to_slack(channel, filenames, message, greet=True):
     None : No parameters are outputted
     
     """
+
+    if not channel.startswith("#"):
+        channel = "#" + channel
 
     greeting = sample(GREETINGS, 1)[0] + " " if greet else ""
     
