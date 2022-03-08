@@ -1,2 +1,1 @@
-requests
 slack_sdk

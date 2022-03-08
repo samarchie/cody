@@ -7,13 +7,13 @@ from textwrap import wrap
 from warnings import warn
 
 GREETINGS = ["Kia ora!", "Howdy partner.", "G'day mate.", "What up g? :sunglasses:", "Ugh finally, this shit is done.", "Kachow! :racing_car:", "Kachigga! :racing_car:", "Sup dude.", "Woaaaaahhhh, would you look at that!", "Easy peasy.", "Rock on bro. :call_me_hand:", "Leshgoooooo!", "Let's get this bread!", "You're doing great dude. :kissing_heart:", "Another one bits the dust...", "Sup, having a good day?", "Yeeeeeeehaw cowboy! :face_with_cowboy_hat:"] 
-HAPPY_EMOJIS = [":tada:", ":cheering_bec:", ":smiley_mitch:", ":ecstatic_tom:", ":partying_face:", ":happy-patrick:", ":happy_tom:", ":dabtom:"]
+HAPPY_EMOJIS = [":tada:", ":cheering-bec:", ":smiley_mitch:", ":ecstatic_tom:", ":partying_face:", ":happy-patrick:", ":happy_tom:", ":dabtom:"]
 SAD_EMOJIS = [":sad_will:", ":sad_willandluci:", ":cry:", ":disappointed_relieved:", ":angywill:"]
 
-SLACK_TOKEN = open("{}/admin/slack_token.txt".format("R:" if platform == "win32" else "/media/CivilSystems"), 'r').read().strip('\n')
+BOT_USER_OAUTH_TOKEN = open("{}/admin/cody/bot_user_oauth_token.txt".format("R:" if platform == "win32" else "/media/CivilSystems"), 'r').read().strip('\n')
 
 
-def post_message_to_slack(channel, message_type, identifier, message=None, greet=True, silent_username=None):
+def post_message_to_slack(channel, message_type, identifier=None, message=None, greet=True, silent_username=None):
     """
     Posts a message to a Slack Channel or User.
     
@@ -46,11 +46,11 @@ def post_message_to_slack(channel, message_type, identifier, message=None, greet
 
     try:
         if silent_username != None:
-            client = WebClient(SLACK_TOKEN)
+            client = WebClient(token=BOT_USER_OAUTH_TOKEN)
             silent_user_id = get_users_information_from_name(silent_username, "id", client)
             _ = client.chat_postEphemeral(channel=channel, blocks=blocks, user=silent_user_id, text=header)
         else:
-            _ = WebClient(SLACK_TOKEN).chat_postMessage(channel=channel, blocks=blocks, text=header)
+            _ = WebClient(token=BOT_USER_OAUTH_TOKEN).chat_postMessage(channel=channel, blocks=blocks, text=header)
     
     except SlackApiError as error:
         warn("The message could not be posted to slack. Error: {}".format(error.response["error"]), UserWarning)
@@ -75,7 +75,10 @@ def generate_header(message_type, identifier):
         If the header is equal to or above 150 characters long, then the string is split into multiple strings and returned in a list.
     
     """
-    
+
+    if identifier == None:
+        return "", None
+
     if message_type == 'Success':
         emojis = sample(HAPPY_EMOJIS, 2)
         header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
@@ -85,7 +88,7 @@ def generate_header(message_type, identifier):
         header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
     
     else:
-        header = f'{message_type.title()} |  {identifier}  |  Running on {gethostname()}'
+        header = f'{message_type.title()} |  {identifier}'
     
     # Unfortunately, there is a 150 character limit on the header length, so split and send multiple if that is the case!
     header_lines = [header]
@@ -121,14 +124,16 @@ def generate_blocks(message_type, message, header_lines, greet):
     greeting = sample(GREETINGS, 1)[0] + " " if greet else ""
 
     blocks=[]
-    for header_line in header_lines:
-        blocks.append({"type": "header", 
-                        "text":
-                            {"type": "plain_text", 
-                            "text": header_line, 
-                            "emoji": True}
-                        })
-    blocks.append({"type": "divider"})
+
+    if header_lines != None:
+        for header_line in header_lines:
+            blocks.append({"type": "header", 
+                            "text":
+                                {"type": "plain_text", 
+                                "text": header_line, 
+                                "emoji": True}
+                            })
+        blocks.append({"type": "divider"})
 
     if message_type.title() ==  "Information":
         blocks.append({ "type": "section",
@@ -190,13 +195,18 @@ def post_file_to_slack(channel, filenames, message, greet=True):
 
     greeting = sample(GREETINGS, 1)[0] + " " if greet else ""
     
-    # In case only one file was passed in, then 
+    # In case only one file was passed in, then chuck the string into a list by itself
     if type(filenames) == str:
         filenames = [filenames]
 
     try:
+        inital_comment_sent = False
         for filename in filenames:
-            _ = WebClient(SLACK_TOKEN).files_upload(channels=channel, initial_comment=greeting+message, file=filename)
+            if not inital_comment_sent:
+                _ = WebClient(token=BOT_USER_OAUTH_TOKEN).files_upload(channels=channel, initial_comment=greeting+message, file=filename)
+                inital_comment_sent = True
+            else:
+                _ = WebClient(token=BOT_USER_OAUTH_TOKEN).files_upload(channels=channel, file=filename)
     
     except SlackApiError as error:
         warn("The file could not be posted to slack. Error: {}".format(error.response["error"]), UserWarning)
