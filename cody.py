@@ -13,14 +13,14 @@ SAD_EMOJIS = [":sad_will:", ":sad_willandluci:", ":cry:", ":disappointed_relieve
 BOT_USER_OAUTH_TOKEN = open("{}/admin/cody/bot_user_oauth_token.txt".format("R:" if platform == "win32" else "/media/CivilSystems"), 'r').read().strip('\n')
 
 
-def post_message_to_slack(channel, message_type, identifier=None, message=None, greet=True, silent_username=None):
+def post_message_to_slack(where_to_post, message_type, identifier=None, message=None, greet=True, silent_username=None, emojis=False):
     """
     Posts a message to a Slack Channel or User.
     
     Parameters
     ----------
-    channel: String
-        A string representing the channel to post to. Note: if you keep on recieving a 'channel_not_found' error, note that a channel must start with a hashtag, and if that fails, then please check the spelling of the channel.
+    where_to_post: String
+        A string representing the channel or person's name to post/directly message to. Note: if you wish to post to a channel, a hashtag ("#") must be placed at the start of the string, otherwise it is assumed that the message
     message_type : String
         A string representing what type of message this post should be. There are currently three options: Information, Failure and Success. Each one will post a different amount of blocks, with differnt styles of wording within them.
     identifier: String
@@ -31,32 +31,39 @@ def post_message_to_slack(channel, message_type, identifier=None, message=None, 
         If True, post a cheerful greeting before the message.
     silent_user: String or None
         If silent_user is specified, then the message is posted to the channel (irrelevant if public or private) but only the silent_user can see the message.
-   
+    emjois: Bool 
+        If True, the message_type will be wrapped with 2 appropiate emojis on either side. Otherwise, no emjois will be printed.
+
     Returns
     -------
     None : No parameters are outputted
     
     """
+    # Start up the client to post to
+    client = WebClient(token=BOT_USER_OAUTH_TOKEN)
     
-    if not channel.startswith("#"):
-        channel = "#" + channel
+    # If it is not a channel, grab the user's ID instead to DM them
+    if not where_to_post.startswith("#"):
+        where_to_post = get_users_information_from_name(where_to_post, "id", client)
 
-    header, header_lines = generate_header(message_type, identifier) 
+    # Generate the content used in the message
+    header, header_lines = generate_header(message_type, identifier, emojis) 
     blocks = generate_blocks(message_type, message, header_lines, greet)
 
     try:
+        # Send a quiet message if requested
         if silent_username != None:
-            client = WebClient(token=BOT_USER_OAUTH_TOKEN)
             silent_user_id = get_users_information_from_name(silent_username, "id", client)
-            _ = client.chat_postEphemeral(channel=channel, blocks=blocks, user=silent_user_id, text=header)
+            _ = client.chat_postEphemeral(channel=where_to_post, blocks=blocks, user=silent_user_id, text=header)
+        # Or send it to a public/private channel
         else:
-            _ = WebClient(token=BOT_USER_OAUTH_TOKEN).chat_postMessage(channel=channel, blocks=blocks, text=header)
+            _ = WebClient(token=BOT_USER_OAUTH_TOKEN).chat_postMessage(channel=where_to_post, blocks=blocks, text=header)
     
     except SlackApiError as error:
         warn("The message could not be posted to slack. Error: {}".format(error.response["error"]), UserWarning)
 
 
-def generate_header(message_type, identifier):
+def generate_header(message_type, identifier, emojis):
     """
     Generates a header, or a list of headers depending on the length of the header, to be used to quickly summarise the message to be posted to the Slack channel or User.
     
@@ -66,6 +73,8 @@ def generate_header(message_type, identifier):
         A string representing what type of message this post should be. There are currently three options: Information, Failure and Success. Each one will post a different amount of blocks, with differnt styles of wording within them.
     identifier: String
         A string that will be used in the header to help identify which simulation the message is referring to. It is recommended that the length of the identifier is kept under 100 characters in order to display the header on one line.
+    emjois: Bool 
+        If True, the message_type will be wrapped with 2 appropiate emojis on either side. Otherwise, no emjois will be printed.
    
     Returns
     -------
@@ -76,20 +85,23 @@ def generate_header(message_type, identifier):
     
     """
 
+    # If no identifier is given, then do not produce a header
     if identifier == None:
         return "", None
 
-    if message_type == 'Success':
-        emojis = sample(HAPPY_EMOJIS, 2)
-        header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
-
-    elif message_type == "Failure":
-        emojis = sample(SAD_EMOJIS, 2)
-        header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
-    
+    # Add some emojis to the header to spice it up if the user has requested so.
+    if emojis:
+        if message_type == 'Success':
+            emojis = sample(HAPPY_EMOJIS, 2)
+            header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
+        elif message_type == "Failure":
+            emojis = sample(SAD_EMOJIS, 2)
+            header = f'{emojis[0]} {message_type.title()} {emojis[1]} |  {identifier}  |  Running on {gethostname()}'
+        else:
+            header = f'{message_type.title()} |  {identifier} |  Running on {gethostname()}'
     else:
-        header = f'{message_type.title()} |  {identifier}'
-    
+        header = f'{message_type.title()} |  {identifier} |  Running on {gethostname()}'
+
     # Unfortunately, there is a 150 character limit on the header length, so split and send multiple if that is the case!
     header_lines = [header]
     if len(header) > 150:
@@ -143,7 +155,7 @@ def generate_blocks(message_type, message, header_lines, greet):
     elif message_type.title() == "Success":
         blocks.append({"type": "section",
                         "text": {"type": "mrkdwn",
-                                "text": f"{greeting}It is my pleasure to inform you that the program has been a success."}
+                                "text": f"{greeting}It is my pleasure to inform you that the procedure has been a success."}
                         })       
     elif message_type.title() == "Failure": 
         # Strip away any output in stdout before the error message begins
@@ -169,9 +181,9 @@ def generate_blocks(message_type, message, header_lines, greet):
     return blocks
 
 
-def post_file_to_slack(channel, filenames, message, greet=True):
+def post_files_to_slack(channel, filenames, message, greet=True):
     """
-    Posts a file to a Slack Channel or User.
+    Posts files to a Slack Channel or User.
     
     Parameters
     ----------
@@ -209,7 +221,7 @@ def post_file_to_slack(channel, filenames, message, greet=True):
                 _ = WebClient(token=BOT_USER_OAUTH_TOKEN).files_upload(channels=channel, file=filename)
     
     except SlackApiError as error:
-        warn("The file could not be posted to slack. Error: {}".format(error.response["error"]), UserWarning)
+        warn("The file {} could not be posted to slack. Error: {}".format(filename, error.response["error"]), UserWarning)
 
 
 def get_users_information_from_name(user_name, wanted_information, client):

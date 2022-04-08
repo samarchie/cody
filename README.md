@@ -27,13 +27,13 @@ This wil be in the form alike: ```xoxb-17653672481-19874698323-pdFZKVeTuE8sk7oOc
 
 3. In your project virtual environmnet or global Python environment, install the required packages in ```requirements.txt```.
 
-4. Inside your project code, place the following lines to import and use the function to post a message to slack.
+4. Inside your project code, place the following lines to import and use the function to post a message to slack. Otherwise, there are examples of how to use the setup Cody in the [Jupyter Notebook File](README.py)
 ```sh
 from os.path import join; from sys import path
 path.append(join("{}".format("R:\\" if platform == "win32" else "/media/CivilSystems"), "admin", "cody"))
 from slack import post_message_to_slack, post_files_to_slack
-post_message_to_slack(channel="#spatial_optimization", message_type="Information", identifier="Simulation 1", message="Hello World!", greet=True, silent_username="Sam")
-post_files_to_slack(channel="#spatial_optimization", ["filepath1", "filepath2", "filepath3"], message='Here are my 3 files!', greet=True)
+post_message_to_slack(where_to_post="#spatial_optimization", message_type="Information", identifier="Simulation 1", message="Hello World!", greet=True, silent_username="Sam")
+post_files_to_slack(where_to_post="Sam", ["filepath1", "filepath2", "filepath3"], message='Here are my 3 files!', greet=True)
 ```
 
 <br>
