@@ -39,6 +39,7 @@ def post_message_to_slack(where_to_post, message_type, identifier=None, message=
     None : No parameters are outputted
     
     """
+
     # Start up the client to post to
     client = WebClient(token=BOT_USER_OAUTH_TOKEN)
     
@@ -150,19 +151,18 @@ def generate_blocks(message_type, message, header_lines, greet):
     if message_type.title() ==  "Information":
         blocks.append({ "type": "section",
                         "text": {"type": "mrkdwn",
-                                "text": message}
+                                "text": greeting+message}
                         })       
     elif message_type.title() == "Success":
         blocks.append({"type": "section",
                         "text": {"type": "mrkdwn",
-                                "text": f"{greeting}It is my pleasure to inform you that the procedure has been a success."}
+                                "text": greeting+"It is my pleasure to inform you that the procedure has been a success."}
                         })       
     elif message_type.title() == "Failure": 
         # Strip away any output in stdout before the error message begins
         lookout_phrase = "Traceback (most recent call last):"
         if lookout_phrase in message:
-            start_index = message.index(lookout_phrase) 
-            message = message[start_index+len(lookout_phrase)]
+            message = message[message.index(lookout_phrase)+len(lookout_phrase):].strip()
 
         blocks.extend([{"type": "section",
                         "text": {"type": "mrkdwn",
@@ -181,14 +181,14 @@ def generate_blocks(message_type, message, header_lines, greet):
     return blocks
 
 
-def post_files_to_slack(channel, filenames, message, greet=True):
+def post_files_to_slack(where_to_post, filenames, message, greet=True):
     """
     Posts files to a Slack Channel or User.
     
     Parameters
     ----------
-    channel: String
-        A string representing the channel to post to. Note: if you keep on recieving a 'channel_not_found' error, note that a channel must start with a hashtag, and if that fails, then please check the spelling of the channel.
+    where_to_post: String
+        A string representing the channel or person's name to post/directly message to. Note: if you wish to post to a channel, a hashtag ("#") must be placed at the start of the string, otherwise it is assumed that the message
     filenames : String or List of Strings
         A string representing the filepath to the file to be posted, or a list of strings to post.
     message: String
@@ -202,9 +202,14 @@ def post_files_to_slack(channel, filenames, message, greet=True):
     
     """
 
-    if not channel.startswith("#"):
-        channel = "#" + channel
+    # Start up the client to post to
+    client = WebClient(token=BOT_USER_OAUTH_TOKEN)
+    
+    # If it is not a channel, grab the user's ID instead to DM them
+    if not where_to_post.startswith("#"):
+        where_to_post = get_users_information_from_name(where_to_post, "id", client)
 
+    # Add a greeting if the user asked for one
     greeting = sample(GREETINGS, 1)[0] + " " if greet else ""
     
     # In case only one file was passed in, then chuck the string into a list by itself
@@ -215,10 +220,12 @@ def post_files_to_slack(channel, filenames, message, greet=True):
         inital_comment_sent = False
         for filename in filenames:
             if not inital_comment_sent:
-                _ = WebClient(token=BOT_USER_OAUTH_TOKEN).files_upload(channels=channel, initial_comment=greeting+message, file=filename)
+                # Send the files with the initial comment as it has not been sent yet
+                _ = client.files_upload(channels=where_to_post, initial_comment=greeting+message, file=filename)
                 inital_comment_sent = True
             else:
-                _ = WebClient(token=BOT_USER_OAUTH_TOKEN).files_upload(channels=channel, file=filename)
+                # Otherwise send just the files
+                _ = client.files_upload(channels=where_to_post, file=filename)
     
     except SlackApiError as error:
         warn("The file {} could not be posted to slack. Error: {}".format(filename, error.response["error"]), UserWarning)
@@ -330,3 +337,7 @@ def get_users_information_from_name(user_name, wanted_information, client):
             chosen_information = chosen_user_details["profile"][correct_wanted_information]
     
     return chosen_information
+
+
+filenames = [r"R:\projects\urban-optim\figures\colourbar.pdf", r"R:\projects\urban-optim\figures\nz.png"]
+post_files_to_slack(where_to_post="Sam", filenames=[r"R:\projects\urban-optim\figures\colourbar.pdf", r"R:\projects\urban-optim\figures\nz.png"], message="Here are the completed files from today's analysis", greet=True)
