@@ -338,6 +338,6 @@ def get_users_information_from_name(user_name, wanted_information, client):
     
     return chosen_information
 
-
-filenames = [r"R:\projects\urban-optim\figures\colourbar.pdf", r"R:\projects\urban-optim\figures\nz.png"]
-post_files_to_slack(where_to_post="Sam", filenames=[r"R:\projects\urban-optim\figures\colourbar.pdf", r"R:\projects\urban-optim\figures\nz.png"], message="Here are the completed files from today's analysis", greet=True)
+if __name__ == "__main__":
+    # Then someone didn't call cody the right way!
+    raise ImportError("Please import the modules from cody, instead of trying to run the script.")
