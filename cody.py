@@ -338,6 +338,7 @@ def get_users_information_from_name(user_name, wanted_information, client):
     
     return chosen_information
 
+
 if __name__ == "__main__":
     # Then someone didn't call cody the right way!
     raise ImportError("Please import the modules from cody, instead of trying to run the script.")
