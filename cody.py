@@ -13,7 +13,7 @@ SAD_EMOJIS = [":sad_will:", ":sad_willandluci:", ":cry:", ":disappointed_relieve
 BOT_USER_OAUTH_TOKEN = open("{}/admin/cody/bot_user_oauth_token.txt".format("R:" if platform == "win32" else "/media/CivilSystems"), 'r').read().strip('\n')
 
 
-def post_message_to_slack(where_to_post, message_type, identifier=None, message=None, greet=True, silent_username=None, emojis=False):
+def post_message_to_slack(where_to_post, message_type, identifier=None, message=None, greet=True, silent_usernames=None, emojis=False):
     """
     Posts a message to a Slack Channel or User.
     
@@ -29,8 +29,8 @@ def post_message_to_slack(where_to_post, message_type, identifier=None, message=
         If the message_type is Information or Failure, the message will be used in a section below a divider and will typically be a informative message or an error traceback for the two message_types respectively. 
     greet: Bool
         If True, post a cheerful greeting before the message.
-    silent_user: String or None
-        If silent_user is specified, then the message is posted to the channel (irrelevant if public or private) but only the silent_user can see the message.
+    silent_usernames: String, List of Strings or None
+        If silent_usernames is specified, then the message is posted to the channel (irrelevant if public or private) but only the silent_users can see the message.
     emjois: Bool 
         If True, the message_type will be wrapped with 2 appropiate emojis on either side. Otherwise, no emjois will be printed.
 
@@ -53,12 +53,16 @@ def post_message_to_slack(where_to_post, message_type, identifier=None, message=
 
     try:
         # Send a quiet message if requested
-        if silent_username != None:
-            silent_user_id = get_users_information_from_name(silent_username, "id", client)
-            _ = client.chat_postEphemeral(channel=where_to_post, blocks=blocks, user=silent_user_id, text=header)
+        if silent_usernames != None:
+            if type(silent_usernames) == str:
+                silent_user_ids = [get_users_information_from_name(silent_usernames, "id", client)]
+            elif type(silent_usernames) == list:
+                silent_user_ids = [get_users_information_from_name(silent_username, "id", client) for silent_username in silent_usernames]
+            for silent_user_id in silent_user_ids:
+                _ = client.chat_postEphemeral(channel=where_to_post, blocks=blocks, user=silent_user_id, text=header)
         # Or send it to a public/private channel
         else:
-            _ = WebClient(token=BOT_USER_OAUTH_TOKEN).chat_postMessage(channel=where_to_post, blocks=blocks, text=header)
+            _ = client.chat_postMessage(channel=where_to_post, blocks=blocks, text=header)
     
     except SlackApiError as error:
         warn("The message could not be posted to slack. Error: {}".format(error.response["error"]), UserWarning)
