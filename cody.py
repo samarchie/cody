@@ -312,19 +312,20 @@ def get_users_information_from_name(user_name, wanted_information, client):
             print(f"Possible Match {counter}:")
             print(exact_match, end="\n")
             counter +=1 
-        correct_individual_number = input(f"From this list, which number (from 1 to {len(exact_matches)}) was the user you were wishing to post locate?")
+        correct_individual_number = int(input(f"From this list, which number (from 1 to {len(exact_matches)}) was the user you were wishing to post locate?"))
         chosen_user_details = exact_matches[correct_individual_number - 1]
     
     else:
         if len(possible_matches) == 1:
             chosen_user_details = possible_matches[0]
+        else:
             print(f"No exact matches were found for '{user_name}. However, multiple possible matches exists. Please define which user you are indending to post to from the current list:\n")
             counter = 1
             for possible_match in possible_matches:
                 print(f"Possible Match {counter}:")
                 print(possible_match, end="\n")
                 counter +=1 
-            correct_individual_number = input(f"From this list, which number (from 1 to {len(possible_matches)}) was the user you were wishing to post locate?")
+            correct_individual_number = int(input(f"From this list, which number (from 1 to {len(possible_matches)}) was the user you were wishing to post locate?"))
             chosen_user_details = possible_matches[correct_individual_number - 1]
 
     # Now grab the wanted_information from the chosen_user_details
